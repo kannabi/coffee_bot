@@ -5,12 +5,17 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import javax.annotation.Generated
 
 class QuizData {
+    @JsonProperty("hello_message")
+    var helloMessage: String = ""
+
+    @JsonProperty("end_message")
+    var endMessage: String = ""
 
     @JsonProperty("result_pics")
-    var resultPics: List<ResultPicsItem>? = null
+    var resultPics: List<ResultPicsItem> = mutableListOf()
 
     @JsonProperty("questions")
-    var questions: List<QuestionsItem>? = null
+    var questions: List<QuestionsItem> = mutableListOf()
 
     override fun toString(): String {
         return "QuizData{" +
