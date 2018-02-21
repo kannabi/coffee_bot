@@ -1,6 +1,8 @@
 package com.awsm_guy.coffee_army_bot.bot
 
-import com.fasterxml.jackson.databind.ObjectMapper
+
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
@@ -8,17 +10,17 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot
 @Component
 class TelegramCoffeeBot: TelegramLongPollingBot() {
 
-    private val mObjectMapper by lazy { ObjectMapper() }
+    private val mLog = LoggerFactory.getLogger(TelegramCoffeeBot::class.java)
 
-    override fun getBotToken(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    @Value("\${bot.token}")
+    private lateinit var mBotToken: String
 
-    override fun getBotUsername(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    @Value("\${bot.username}")
+    private lateinit var mBotName: String
 
-    override fun onUpdateReceived(update: Update?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    override fun getBotToken(): String = mBotToken
+
+    override fun getBotUsername(): String = mBotName
+
+    override fun onUpdateReceived(update: Update?) {}
 }
