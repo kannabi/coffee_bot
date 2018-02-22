@@ -2,14 +2,18 @@ package com.awsm_guy.coffee_army_bot.bot
 
 import com.awsm_guy.coffee_army_bot.bot.pojo.QuizData
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.apache.commons.io.FileUtils
+import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.io.ClassPathResource
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.api.objects.Update
 import java.io.File
 import javax.annotation.PostConstruct
+
 
 @Component
 class QuizService {
@@ -33,9 +37,8 @@ class QuizService {
     private fun loadData() {
         try {
             mQuizData = mObjectMapper.readValue(
-//                    File(mDataPath).inputStream().bufferedReader().use { it.readText() },
-                    File("C:\\Users\\hekpo\\Documents\\Projects\\coffee_army_bot\\data.json")
-                            .inputStream().bufferedReader().use { it.readText() },
+                    ClassPathResource("data.json")
+                            .inputStream.bufferedReader().use { it.readText() },
                     QuizData::class.java
             )
             mLog.info("Quiz data loaded.")
@@ -48,21 +51,27 @@ class QuizService {
     fun processMessage(update: Update) {
         when (update.message.text) {
             "/start" -> startQuiz(update)
+            "/ping" -> answerToPing(update.message.chatId)
             else -> processAnswer(update.message.chatId, update.message.text)
         }
+    }
+
+    private fun answerToPing(chatId: Long) {
+        mBot.sendPlainTextMessage(chatId, "Bot work correctly\n\nNumber of current dialogs: ${mChatsCache.size}\n\nDialogs passed: ${mDoneChats.size}")
     }
 
     private fun processAnswer(chatId: Long, answer: String) {
         mChatsCache[chatId]?.let {
             val correctAnswer = mQuizData.questions[it.currentStep].correctAnswers
 
+            mLog.info("User ${it.chatId} send $answer")
             mBot.sendPlainTextMessage(chatId,
                                         if (answer == correctAnswer){
                                             it.currentRate++
-                                            mLog.info("User ${it.firstName} ${it.lastName} ${it.nickName} answer correct")
+                                            mLog.info("User ${it.chatId} answer correct")
                                              "Верно!"
                                         } else {
-                                            mLog.info("User ${it.firstName} ${it.lastName} ${it.nickName} don't answer correct")
+                                            mLog.info("User ${it.chatId} don't answer correct")
                                             "Неверно. На самом деле: $correctAnswer"
                                         })
 
@@ -84,8 +93,8 @@ class QuizService {
             return
         }
         with(update.message.from){
-            mLog.info("User $firstName $lastName $userName start quiz")
-            mChatsCache.put(chatId, Chat(chatId, firstName, lastName, userName))
+            mLog.info("User $chatId start quiz")
+            mChatsCache.put(chatId, Chat(chatId))
         }
         mBot.sendPlainTextMessage(chatId, mQuizData.helloMessage)
         mBot.sendQuestion(chatId, mQuizData.questions[0])
@@ -95,10 +104,23 @@ class QuizService {
         with(chat){
             mChatsCache.remove(chatId)
             mDoneChats.add(chatId)
-            mLog.info("User $firstName $lastName $nickName end quiz")
+            mLog.info("User $chatId end quiz")
             mBot.sendPlainTextMessage(chatId, mQuizData.endMessage)
-            mBot.sendPicture(chatId, File(mQuizData.resultPics[currentRate].picUri))
-
+            mBot.sendPicture(chatId, getFile("${mQuizData.resultPics[currentRate].picUri}"))
         }
+    }
+
+    private fun getFile(path: String): File {
+        val classPathResource = ClassPathResource(path)
+
+        val inputStream = classPathResource.inputStream
+        val somethingFile = File.createTempFile(path.split(".")[0], ".jpg")
+        try {
+            FileUtils.copyInputStreamToFile(inputStream, somethingFile)
+        } finally {
+            IOUtils.closeQuietly(inputStream)
+        }
+
+        return somethingFile
     }
 }
